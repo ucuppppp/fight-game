@@ -8,8 +8,12 @@ function rectangularCollision({ rectangle1, rectangle2 }) {
   }
   
   function updateHealthBars() {
-    document.querySelector("#playerHealth").style.width = player.health + "%";
-    document.querySelector("#enemyHealth").style.width = enemy.health + "%";
+    gsap.to('#playerHealth', {
+      width: player.health + "%"
+    })
+    gsap.to('#enemyHealth', {
+      width: enemy.health + "%"
+    })
   }
   
   function determineWinner({player, enemy, timerId}){
@@ -21,7 +25,6 @@ function rectangularCollision({ rectangle1, rectangle2 }) {
       document.querySelector('#displayText').innerHTML = 'Player 1 Wins'
     }else if(player.health < enemy.health){
       document.querySelector('#displayText').innerHTML = 'Player 2 Wins'
-      
     }
   }
   

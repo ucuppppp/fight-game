@@ -2,7 +2,13 @@
 
 
 class Sprite {
-  constructor({ position, imageSrc, scale = 1, framesMax = 1, offset = { x: 0, y: 0 } }) {
+  constructor({
+    position,
+    imageSrc,
+    scale = 1,
+    framesMax = 1,
+    offset = { x: 0, y: 0 }
+  }) {
     this.position = position;
     this.width = 50;
     this.height = 150;
@@ -26,7 +32,8 @@ class Sprite {
       this.position.x - this.offset.x,
       this.position.y - this.offset.y,
       (this.image.width / this.framesMax) * this.scale,
-      this.image.height * this.scale)
+      this.image.height * this.scale
+    )
   }
 
   animateFrame() {
@@ -49,6 +56,7 @@ class Sprite {
 }
 class Fighter extends Sprite {
   constructor({
+    damage,
     position,
     velocity,
     color = "red",
@@ -56,7 +64,8 @@ class Fighter extends Sprite {
     scale = 1,
     framesMax = 1,
     offset = { x: 0, y: 0 },
-    sprites
+    sprites,
+    attackBox = {offset:{}, width:undefined, height:undefined}
   }) {
     super({
       position,
@@ -65,6 +74,7 @@ class Fighter extends Sprite {
       framesMax,
       offset
     })
+    this.damage = damage
     this.sprites = sprites
     this.velocity = velocity;
     this.width = 50;
@@ -74,9 +84,9 @@ class Fighter extends Sprite {
         x: this.position.x,
         y: this.position.y,
       },
-      offset,
-      width: 100,
-      height: 50,
+      offset: attackBox.offset,
+      width: attackBox.width,
+      height: attackBox.height,
     };
     this.color = color;
     this.isAttacking = false;
@@ -85,6 +95,7 @@ class Fighter extends Sprite {
     this.framesCurrent = 0
     this.framesElapsed = 0
     this.framesHold = 10
+    this.dead = false
 
     for (const sprite in this.sprites) {
       sprites[sprite].image = new Image()
@@ -94,9 +105,21 @@ class Fighter extends Sprite {
 
   update() {
     this.draw();
+    if(!this.dead)
     this.animateFrame()
     this.position.x += this.velocity.x;
     this.position.y += this.velocity.y;
+
+    this.attackBox.position.x = this.position.x + this.attackBox.offset.x
+    this.attackBox.position.y = this.position.y + this.attackBox.offset.y
+
+
+    // c.fillRect(
+    //   this.attackBox.position.x,
+    //   this.attackBox.position.y,
+    //   this.attackBox.width,
+    //   this.attackBox.height
+    // );
 
     // Jika sprite menyentuh "ground", hentikan pergerakan jatuh
     if (this.position.y + this.height + this.velocity.y >= groundLevel) {
@@ -112,15 +135,31 @@ class Fighter extends Sprite {
     this.isAttacking = true;
     this.canAttack = false;
     setTimeout(() => {
-      this.isAttacking = false;
-    }, 100);
-    setTimeout(() => {
       this.canAttack = true;
     }, 500); // Delay serangan 500ms
   }
 
+  takeHit(damage){
+    this.health -= damage
+    if(this.health <= 0){
+      this.switchSprite('death')
+      return {dead:true}
+    }else{
+      this.switchSprite('takeHit')
+      return {dead:false}
+    }
+  }
+
   switchSprite(sprite) {
+    // overriding sprite
+    if (this.image === this.sprites.death.image) {
+      if(this.framesCurrent === this.sprites.death.framesMax - 1)
+        this.dead =true
+      return}
     if (this.image === this.sprites.attack1.image && this.framesCurrent < this.sprites.attack1.framesMax - 1) return
+
+    if (this.image === this.sprites.takeHit.image && this.framesCurrent < this.sprites.takeHit.framesMax - 1) return
+
     switch (sprite) {
       case 'idle':
         if (this.image !== this.sprites.idle.image) {
@@ -132,7 +171,6 @@ class Fighter extends Sprite {
       case 'run':
         if (this.image !== this.sprites.run.image) {
           this.image = this.sprites.run.image
-          console.log(this.image);
           this.framesMax = this.sprites.run.framesMax
           this.framesCurrent = 0
         }
@@ -158,6 +196,20 @@ class Fighter extends Sprite {
           this.framesCurrent = 0
         }
         break
+      case 'takeHit':
+        if (this.image !== this.sprites.takeHit.image) {
+          this.image = this.sprites.takeHit.image
+          this.framesMax = this.sprites.takeHit.framesMax
+          this.framesCurrent = 0
+        }
+        break
+      case 'death':
+        if (this.image !== this.sprites.death.image) {
+          this.image = this.sprites.death.image
+          this.framesMax = this.sprites.death.framesMax
+          this.framesCurrent = 0
+        }
+        break
     }
   }
 }
@@ -173,9 +225,15 @@ class InputHandler {
   keyDownHandler(e) {
     this.keys[e.code] = true;
     if (
-      ["KeyA", "KeyD", "KeyW", "ArrowRight", "ArrowLeft", "ArrowUp", "Space"].includes(
-        e.code
-      )
+      [
+        "KeyA",
+        "KeyD",
+        "KeyW",
+        "ArrowRight",
+        "ArrowLeft",
+        "ArrowUp",
+        "Space",
+      ].includes(e.code)
     ) {
       this.lastKey = e.code;
     }
@@ -187,5 +245,11 @@ class InputHandler {
 
   isKeyPressed(code) {
     return !!this.keys[code];
+  }
+
+  // Fungsi untuk membersihkan semua input (dipanggil saat player mati)
+  clearKeys() {
+    this.keys = {}; // Hapus semua input yang sedang aktif
+    this.lastKey = null; // Reset lastKey agar tidak ada input yang tertinggal
   }
 }
